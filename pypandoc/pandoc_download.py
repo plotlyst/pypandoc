@@ -11,6 +11,8 @@ import sys
 import tempfile
 from typing import Union
 
+import requests
+
 import urllib
 try:
     from urllib.request import urlopen
@@ -192,6 +194,14 @@ def _handle_win32(filename, targetfolder):
     logger.info("Done.")
 
 
+def download_file(url, target):
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(target, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+
 def download_pandoc(url:Union[str, None]=None,
                     targetfolder:Union[str, None]=None,
                     version:str="latest",
@@ -246,10 +256,7 @@ def download_pandoc(url:Union[str, None]=None,
         logger.info(f"Using already downloaded file {filename}")
     else:
         logger.info(f"Downloading pandoc from {url} ...")
-        # https://stackoverflow.com/questions/30627937/tracebaclk-attributeerroraddinfourl-instance-has-no-attribute-exit
-        response = urlopen(url)
-        with open(filename, 'wb') as out_file:
-            shutil.copyfileobj(response, out_file)
+        download_file(url, filename)
 
     if targetfolder is None:
         targetfolder = DEFAULT_TARGET_FOLDER[pf]
