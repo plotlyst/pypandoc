@@ -13,12 +13,6 @@ from typing import Union
 
 import requests
 
-import urllib
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib import urlopen
-
 from .handler import logger, _check_log_handler
 
 DEFAULT_TARGET_FOLDER = {
@@ -46,23 +40,15 @@ def _get_pandoc_urls(version="latest"):
     # url to pandoc download page
     url = "https://github.com/jgm/pandoc/releases/" + \
           ("tag/" if version != "latest" else "") + version
-    # try to open the url
-    try:
-        response = urlopen(url)
-        version_url_frags = response.url.split("/")
-        version = version_url_frags[-1]
-    except urllib.error.HTTPError as e:
-        raise RuntimeError("Invalid pandoc version {}.".format(version))
-        return
     # read the HTML content
-    response = urlopen(f"https://github.com/jgm/pandoc/releases/expanded_assets/{version}")
-    content = response.read()
+    response = requests.get(f"https://github.com/jgm/pandoc/releases/expanded_assets/{version}")
+    content = response.text
     # regex for the binaries
     uname = platform.uname()[4]
     processor_architecture = "arm" if uname.startswith("arm") or uname.startswith("aarch") else "amd"
     regex = re.compile(fr"/jgm/pandoc/releases/download/.*(?:{processor_architecture}|x86|mac).*\.(?:msi|deb|pkg)")
     # a list of urls to the binaries
-    pandoc_urls_list = regex.findall(content.decode("utf-8"))
+    pandoc_urls_list = regex.findall(content)
     # actual pandoc version
     version = pandoc_urls_list[0].split('/')[5]
     # dict that lookup the platform from binary extension
